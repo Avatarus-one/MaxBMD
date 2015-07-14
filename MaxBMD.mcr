@@ -3179,7 +3179,10 @@ struct FrameNode
 			(
 				-- create an end point bone (same direction as parent bone with a length of boneThickness)
 			    local start = startPoint 
-				dir  = normalize (parentBone.position - start) 
+				if (parentBone != undefined) then		-- THIS FIXES IMPORT OF MODELS WITH ONE BONE
+					dir  = normalize (parentBone.position - start) 
+				else
+					dir  = [0,0,0]
 				dir  *= (-1 * boneThickness)
 				dir += startPoint 
 				endPoint = [dir.x, dir.y, dir.z]
@@ -3939,26 +3942,61 @@ struct BModel
 			)
 		)
 		
-		modelMesh = mesh vertices: vertices faces:faces tverts:tverts materialIDS:_materialIDS
-		modelMesh.name = getFilenameFile _bmdFilePath
-		
-		update modelMesh
-		ClassOf modelMesh
-
-		-- tvert faces
-		--Set texcoord faces 
-		buildTVFaces modelMesh  false
-		for i = 1 to tFaces.count do
+		-- FIX: Fill missing material IDs
+		if (_materialIDS.count > 0) then
 		(
-			if (tFaces[i] != undefined) then -- TODO: should never have undefined texture faces
-				setTVFace modelMesh i tFaces[i]
-		)
+			for i=_materialIDS.count+1 to faces.count do
+			(
+				_materialIDS[i] = 0
+			)
+			
+			
+			modelMesh = mesh vertices: vertices faces:faces tverts:tverts materialIDS:_materialIDS
+			modelMesh.name = getFilenameFile _bmdFilePath
+			
+			update modelMesh
+			ClassOf modelMesh
 
+			-- tvert faces
+			--Set texcoord faces 
+			buildTVFaces modelMesh  false
+			for i = 1 to tFaces.count do
+			(
+				if (tFaces[i] != undefined) then -- TODO: should never have undefined texture faces
+					setTVFace modelMesh i tFaces[i]
+			)
+		)
+		else
+		(
+			_materialIDS.count = faces.count
+			for i = 1 to _materialIDS.count do
+			(
+				_materialIDS[i] = 0 -- not found index
+			)
+			
+			
+			modelMesh = mesh vertices: vertices faces:faces tverts:tverts materialIDS:_materialIDS
+			modelMesh.name = getFilenameFile _bmdFilePath
+			
+			update modelMesh
+			ClassOf modelMesh
+
+			-- tvert faces
+			--Set texcoord faces 
+			--buildTVFaces modelMesh  false	-- FIX: Do not set texture faces when there are no textures on model.
+			for i = 1 to tFaces.count do
+			(
+				if (tFaces[i] != undefined) then -- TODO: should never have undefined texture faces
+					setTVFace modelMesh i tFaces[i]
+			)
+		)
+		
+		
 		-- set normals [no effect?]
 		if (normals.count != vertices.count) then
 		(
-			messageBox "Invalid normals?"
-			throw "Invalid normals?"
+			--messageBox "Invalid normals?"	-- FIX: IGNORE INVALID NORMALS TO ALLOW IMPORT SOME MODELS
+			--throw "Invalid normals?"
 		)
 		for i = 1 to vertices.count  do
 		(
@@ -4052,7 +4090,7 @@ struct BModel
 		meditMaterials[1]  = cmat
 		
 		-- freeze model by default
-		freeze  modelMesh
+		--freeze  modelMesh	-- DO NOT FREEZE MODEL BY DEFAULT
 		modelMesh.showFrozenInGray = off
 		
 		return modelMesh
@@ -4196,11 +4234,14 @@ fn DrawBatch index def =
 	  multiMatrixTable = #()
 
 	--print (vtx.texCoords.count as string)
-	 for i = 1 to vtx.texCoords[1].count do
-	 (
-		tvert = vtx.texCoords[1][i]
-		tverts[i] = [tvert.s, -tvert.t, 0] -- flip uv v element
-	 )
+	if (vtx.texCoords[1] != undefined) then
+	(
+		for i = 1 to vtx.texCoords[1].count do
+		(
+			tvert = vtx.texCoords[1][i]
+			tverts[i] = [tvert.s, -tvert.t+1, 0] -- flip uv v element
+		)
+	)
 
 	  for currPacket in currBatch.packets do
 	  (
@@ -4420,7 +4461,8 @@ fn CreateFrameNodes j d parentMatrix parentFrameNode =
 			
 			fNode.parentFrameNode = parentFrameNode
 			fNode.effP = effP
-			fNode.name = _bmdFileName + "_" + f.name
+			--fNode.name = _bmdFileName + "_" + f.name	-- FIX: DO NOT ADD FILENAME PREFIX TO BONES
+			fNode.name = f.name
 			
 			append parentFrameNode.children fNode
 		   b1 = true
@@ -4564,7 +4606,7 @@ fn DrawScenegraph j d parentMatrix =
 			_currMaterialIndex += 1
 			
 			-- messageBox (matName + (tex.texHeaders[v2].wrapS as string) + "+" + (tex.texHeaders[v2].wrapT as string))
-			-- NOTE: check ash.bmd for case when wrapS=2 and wrap=2. u_offset = 0.5 and V_offset = -0.5 [note negative on v]
+			-- NOTE: check ash.bmd for case when wrapS=2 and wrap=2. u_offset = 0.5 and V_offset = 0.5
 			if (bmpFound) then
 			(
 				if (tex.texHeaders[v2].wrapS == 0) then -- clamp to edge? Needs testing. Cannot use .U_Mirror = false and .U_Tile = false. If WrapS == 0 then has Alpha?
@@ -4617,15 +4659,15 @@ fn DrawScenegraph j d parentMatrix =
 					(
 						_currMaterial.diffusemap.coords.V_Mirror = true
 						_currMaterial.diffusemap.coords.V_Tile = false
-						_currMaterial.diffusemap.coords.V_offset = -0.5
+						_currMaterial.diffusemap.coords.V_offset = 0.5
 						_currMaterial.diffusemap.coords.V_Tiling = 0.5
 						
 						if (hasAlpha) then
 						(	
 							_currMaterial.opacityMap.coords.V_Mirror = true
 							_currMaterial.opacityMap.coords.V_Tile = false
-							_currMaterial.opacityMap.coords.V_offset = -0.5
-							_currM
+							_currMaterial.opacityMap.coords.V_offset = 0.5
+							_currMaterial.opacityMap.coords.V_Tiling = 0.5
 						)
 					)
 				)
@@ -4679,8 +4721,8 @@ fn DrawScene =
 	identity = m.GetIdentity()
 	CreateFrameNodes 0 0 identity rootFrameNode 
 	
-	if ((rootFrameNode.children.count == 1 AND rootFrameNode.children[1].children.count == 0)) then
-		_createBones = false  
+	--if ((rootFrameNode.children.count == 1 AND rootFrameNode.children[1].children.count == 0)) then	-- FIX: THIS FORCES TO CREATE BONES EVEN IF THERE ARE ONLY ONE BONE. 
+	--	_createBones = false  
 	
 	local origWorldBonePos = undefined
 	
