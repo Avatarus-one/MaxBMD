@@ -3849,7 +3849,7 @@ struct BModel
 	
 	_parentBoneIndexs = #(),
 	_allowTextureMirror = false, -- doesn't work on characters? required for stages?
-	
+	_forceCreateBones = false,
 	
 	_exportType=#XFILE, -- #XFILE, #CHARACTER
 	_runExtractTexturesCmd = true,
@@ -4617,6 +4617,7 @@ fn DrawScenegraph j d parentMatrix =
 				)
 				else if (tex.texHeaders[v2].wrapS == 2) then
 				(
+					_currMaterial.name += "_U" -- add suffix to let the modeler know where mirror should be used
 					if (_allowTextureMirror) then
 					(
 						_currMaterial.diffusemap.coords.U_Mirror = true
@@ -4643,18 +4644,10 @@ fn DrawScenegraph j d parentMatrix =
 				)
 				else if (tex.texHeaders[v2].wrapT == 1) then -- repeat (default)
 				(
-					/*
-					_currMaterial.diffusemap.coords.V_Mirror = false
-					_currMaterial.diffusemap.coords.V_Tile = true
-					
-					if (hasAlpha) then
-					(	
-						_currMaterial.opacityMap.coords.V_Mirror = false
-						_currMaterial.opacityMap.coords.V_Tile = true
-					)*/
 				)
 				else if (tex.texHeaders[v2].wrapT == 2) then
 				(
+					_currMaterial.name += "_V" -- add suffix to let the modeler know where mirror should be used
 					if (_allowTextureMirror) then
 					(
 						_currMaterial.diffusemap.coords.V_Mirror = true
@@ -4721,8 +4714,9 @@ fn DrawScene =
 	identity = m.GetIdentity()
 	CreateFrameNodes 0 0 identity rootFrameNode 
 	
-	--if ((rootFrameNode.children.count == 1 AND rootFrameNode.children[1].children.count == 0)) then	-- FIX: THIS FORCES TO CREATE BONES EVEN IF THERE ARE ONLY ONE BONE. 
-	--	_createBones = false  
+	-- FIX: Force create bone option allows to generate bones independently of their count
+	if ((rootFrameNode.children.count == 1 AND rootFrameNode.children[1].children.count == 0) AND not _forceCreateBones) then
+		_createBones = false  
 	
 	local origWorldBonePos = undefined
 	
@@ -5048,7 +5042,7 @@ fn CreateBTPDataFile =
 	close fBTP
 ),
 	
-fn Import filename boneThickness loadAnimations exportTextures exportType includeScaling =
+fn Import filename boneThickness allowTextureMirror forceCreateBones loadAnimations exportTextures exportType includeScaling =
 (
 	if (exportTextures) then
 		_texturePrefix = ""
@@ -5063,9 +5057,9 @@ fn Import filename boneThickness loadAnimations exportTextures exportType includ
 	--_exportType=#XFILE
 	_exportType=exportType 
 	
-	_allowTextureMirror = true -- doesn't work on characters? required for stages?
-	
-	_loadAnimations =loadAnimations
+	_allowTextureMirror = allowTextureMirror
+	_forceCreateBones = forceCreateBones
+	_loadAnimations = loadAnimations
 	_boneThickness = boneThickness
 	LoadModel filename
 	
@@ -5091,10 +5085,12 @@ fn Import filename boneThickness loadAnimations exportTextures exportType includ
 		edittext txtFilePath "BMD File: " enabled:false text:"" width:250 align:#left
 		button btnBrowse "Browse..." width:100 align:#center
 		spinner spnBoneThickness "Bone Thickness:" range:[0,100,5] align:#left fieldwidth:50
+		checkBox chkTextureMirror "Allow mirrored textures " checked:true width:250 align:#left
+		checkBox chkForceBones "Force create bones " checked:false width:250 align:#left
 		checkBox chkSaveAnim "Save Animations " checked:true width:250 align:#left
 		checkBox chkExportTextures "Export textures" checked:true width:250 align:#left
-		checkBox chkIncludeScaling "Include scaling" checked:true width:250 align:#left
-		radiobuttons radExportType labels:#(".X export (games)", "character export (modeling)")
+		checkBox chkIncludeScaling "Include scaling" checked:false width:250 align:#left
+		radiobuttons radExportType labels:#("character export (modeling)", ".X export (games)")
 		button btnImport "Import" width:100 align:#center
 		label lblNotes "" width:250 height:200 align:#left -- IMPORTANT: must unhide all items before exporting .x file.
 		
@@ -5126,11 +5122,11 @@ fn Import filename boneThickness loadAnimations exportTextures exportType includ
 					-- UPDATE BMDVIEW.EXE PATH
 					-- bmd.SetBmdViewExePath "C:\\" -- if Max version before 2008 and the path contains spaces the path will have to be manually updated
 					local exportType = case radExportType.state of (
-														1: #XFILE
-														2: #CHARACTER
+														1: #CHARACTER
+														2: #XFILE
 													)
 
-					bmd.Import txtFilePath.text spnBoneThickness.value chkSaveAnim.checked chkExportTextures.checked exportType chkIncludeScaling.checked
+					bmd.Import txtFilePath.text spnBoneThickness.value chkTextureMirror.checked chkForceBones.checked chkSaveAnim.checked chkExportTextures.checked exportType chkIncludeScaling.checked
 					btnImport.enabled = true
 				)
 				
@@ -5141,6 +5137,6 @@ fn Import filename boneThickness loadAnimations exportTextures exportType includ
 		)
 	)
 	
-	createDialog MaxBMDUI_Rollout 300 200
+	createDialog MaxBMDUI_Rollout 300 240
 
-) 
+) 
