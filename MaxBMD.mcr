@@ -1126,7 +1126,7 @@ fn LoadPacketPrimitives attribs dataSize br =
 					        attribs[k].attrib == 0x13 OR
 					        attribs[k].attrib == 0x14 then 
 					(
-						curPoint.texCoordIndex[(attribs[k].attrib - 0xd) + 1] = val
+						curPoint.texCoordIndex[(attribs[k].attrib - 0xd) + 1] = val + 1
 					)
 					else
 					(
@@ -3839,8 +3839,8 @@ struct BModel
 	
 	vertices = #(),
 	faces = #(),
-	tverts = #(),
-	tFaces = #(),
+	tverts = #(#(),#(),#(),#(),#(),#(),#(),#()),
+	tFaces = #(#(),#(),#(),#(),#(),#(),#(),#()),
 	normals = #(),
 	vcFaces = #(), -- vertex color
 	vertexMultiMatrixEntry = #(),
@@ -3929,7 +3929,10 @@ struct BModel
 		(
 			faces = ReverseArray faces
 			_materialIDS = ReverseArray _materialIDS
-			tFaces = ReverseArray tFaces
+			for uv = 1 to 8 do
+			(
+				tFaces[uv] = ReverseArray tFaces[uv]
+			)
 			vcFaces = ReverseArray vcFaces
 		)
 		
@@ -3949,22 +3952,6 @@ struct BModel
 			(
 				_materialIDS[i] = 0
 			)
-			
-			
-			modelMesh = mesh vertices: vertices faces:faces tverts:tverts materialIDS:_materialIDS
-			modelMesh.name = getFilenameFile _bmdFilePath
-			
-			update modelMesh
-			ClassOf modelMesh
-
-			-- tvert faces
-			--Set texcoord faces 
-			buildTVFaces modelMesh  false
-			for i = 1 to tFaces.count do
-			(
-				if (tFaces[i] != undefined) then -- TODO: should never have undefined texture faces
-					setTVFace modelMesh i tFaces[i]
-			)
 		)
 		else
 		(
@@ -3973,24 +3960,40 @@ struct BModel
 			(
 				_materialIDS[i] = 0 -- not found index
 			)
+		)
 			
 			
-			modelMesh = mesh vertices: vertices faces:faces tverts:tverts materialIDS:_materialIDS
-			modelMesh.name = getFilenameFile _bmdFilePath
-			
-			update modelMesh
-			ClassOf modelMesh
+		modelMesh = mesh vertices: vertices faces:faces tverts:tverts[1] materialIDS:_materialIDS
+		modelMesh.name = getFilenameFile _bmdFilePath
+		
+		update modelMesh
+		ClassOf modelMesh
 
-			-- tvert faces
-			--Set texcoord faces 
-			--buildTVFaces modelMesh  false	-- FIX: Do not set texture faces when there are no textures on model.
-			for i = 1 to tFaces.count do
+		-- tvert faces
+		--Set texcoord faces 
+		if (_materialIDS.count > 0) then	-- FIX: Do not set texcoord faces when there are no textures on model.
+			buildTVFaces modelMesh  false
+		
+		for uv = 1 to 8 do
+		(
+			if (tverts[uv].count > 0 and tFaces[uv].count > 0) then
 			(
-				if (tFaces[i] != undefined) then -- TODO: should never have undefined texture faces
-					setTVFace modelMesh i tFaces[i]
+				meshop.setNumMaps modelMesh (uv+1)
+				meshop.setMapSupport modelMesh uv true
+				
+				for i = 1 to tverts[uv].count do
+				(
+					if (tverts[uv][i] != undefined) then
+						meshop.setMapVert modelMesh uv i tverts[uv][i]
+				)
+				
+				for i = 1 to tFaces[uv].count do
+				(
+					if (tFaces[uv][i] != undefined) then -- TODO: should never have undefined texture faces
+						meshop.setMapFace modelMesh uv i tFaces[uv][i]
+				)
 			)
 		)
-		
 		
 		-- set normals [no effect?]
 		if (normals.count != vertices.count) then
@@ -4018,7 +4021,10 @@ struct BModel
 
 			
 			for i = 1 to vtx.colors[1].count do
-				setVertColor  modelMesh i vtx.colors[1][i]
+			(
+				setVertColor modelMesh i vtx.colors[1][i]
+				--setVertAlpha modelMesh i vtx.colors[1][i].a
+			)
 			
 			buildVCFaces modelMesh false
 
@@ -4234,12 +4240,15 @@ fn DrawBatch index def =
 	  multiMatrixTable = #()
 
 	--print (vtx.texCoords.count as string)
-	if (vtx.texCoords[1] != undefined) then
+	for uv = 1 to 8 do
 	(
-		for i = 1 to vtx.texCoords[1].count do
+		if (vtx.texCoords[uv] != undefined) then
 		(
-			tvert = vtx.texCoords[1][i]
-			tverts[i] = [tvert.s, -tvert.t+1, 0] -- flip uv v element
+			for i = 1 to vtx.texCoords[uv].count do
+			(
+				tvert = vtx.texCoords[uv][i]
+				tverts[uv][i] = [tvert.s, -tvert.t+1, 0] -- flip uv v element
+			)
 		)
 	)
 
@@ -4360,18 +4369,24 @@ fn DrawBatch index def =
 						else 
 							faces[faceIndex] = [posIndex3, posIndex2, posIndex1] -- reverse
 						
-						if currBatch.attribs.hasTexCoords[1] then
+						for uv = 1 to 8 do
 						(
-						   	t1Index = currPrimitive.points[m].texCoordIndex[1] + 1
-							t2Index = currPrimitive.points[m + 1].texCoordIndex[1] + 1
-							t3Index = currPrimitive.points[m + 2].texCoordIndex[1] + 1
-						 
-						  	if (mod m 2) == 0 then -- even
-								tFaces[faceIndex] = [t1Index , t2Index , t3Index ]
-							else 
-								tFaces[faceIndex] = [t3Index , t2Index , t1Index ] -- reverse
-							
-							_materialIDS[faceIndex] = _currMaterialIndex - 1
+							if currBatch.attribs.hasTexCoords[uv] then
+							(
+								t1Index = currPrimitive.points[m].texCoordIndex[uv]
+								t2Index = currPrimitive.points[m + 1].texCoordIndex[uv]
+								t3Index = currPrimitive.points[m + 2].texCoordIndex[uv]
+								
+								if (t1Index != 0 and t2Index != 0 and t3Index != 0) then
+								(
+									if (mod m 2) == 0 then -- even
+										tFaces[uv][faceIndex] = [t1Index , t2Index , t3Index ]
+									else 
+										tFaces[uv][faceIndex] = [t3Index , t2Index , t1Index ] -- reverse
+								)
+								
+								_materialIDS[faceIndex] = _currMaterialIndex - 1
+							)
 						)
 						
 						
