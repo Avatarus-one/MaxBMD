@@ -1126,7 +1126,7 @@ fn LoadPacketPrimitives attribs dataSize br =
 					        attribs[k].attrib == 0x13 OR
 					        attribs[k].attrib == 0x14 then 
 					(
-						curPoint.texCoordIndex[(attribs[k].attrib - 0xd) + 1] = val + 1
+						curPoint.texCoordIndex[(attribs[k].attrib - 0xd) + 1] = val
 					)
 					else
 					(
@@ -3980,12 +3980,15 @@ struct BModel
 			(
 				meshop.setNumMaps modelMesh (uv+1)
 				meshop.setMapSupport modelMesh uv true
+				--meshop.setNumMapVerts modelMesh uv tverts[uv].count
 				
 				for i = 1 to tverts[uv].count do
 				(
 					if (tverts[uv][i] != undefined) then
 						meshop.setMapVert modelMesh uv i tverts[uv][i]
 				)
+				
+				--meshop.buildMapFaces modelMesh uv
 				
 				for i = 1 to tFaces[uv].count do
 				(
@@ -4017,16 +4020,23 @@ struct BModel
 			
 			--if (vtx.colors[1].count > 1) then
 			--	throw ("vtx.colors[1].count = " + (vtx.colors[1].count as string))
-			setNumCPVVerts modelMesh vtx.colors[1].count
-
+			
+			meshop.setMapSupport modelMesh -2 true
+			
+			--setNumCPVVerts modelMesh vtx.colors[1].count
+			meshop.setNumMapVerts modelMesh 0 vtx.colors[1].count
+			meshop.setNumMapVerts modelMesh -2 vtx.colors[1].count
 			
 			for i = 1 to vtx.colors[1].count do
 			(
-				setVertColor modelMesh i vtx.colors[1][i]
-				--setVertAlpha modelMesh i vtx.colors[1][i].a
+				--setVertColor modelMesh i vtx.colors[1][i]
+				meshop.setVertColor modelMesh 0 i vtx.colors[1][i]
+				meshop.setVertAlpha modelMesh -2 i vtx.colors[1][i].a
 			)
 			
-			buildVCFaces modelMesh false
+			--buildVCFaces modelMesh false
+			meshop.buildMapFaces modelMesh 0
+			meshop.buildMapFaces modelMesh -2
 
 			for i = 1 to vcFaces.count do
 			(
@@ -4034,7 +4044,9 @@ struct BModel
 				(
 					--messageBox "Vertex color error"
 					--throw "Vertex color error"
-					setVCFace modelMesh i vcFaces[i][1] vcFaces[i][2] vcFaces[i][3]
+					--setVCFace modelMesh i vcFaces[i][1] vcFaces[i][2] vcFaces[i][3]
+					meshop.setMapFace modelMesh 0 i [vcFaces[i][1], vcFaces[i][2], vcFaces[i][3]]
+					meshop.setMapFace modelMesh -2 i [vcFaces[i][1], vcFaces[i][2], vcFaces[i][3]]
 				)
 				
 				
@@ -4373,17 +4385,14 @@ fn DrawBatch index def =
 						(
 							if currBatch.attribs.hasTexCoords[uv] then
 							(
-								t1Index = currPrimitive.points[m].texCoordIndex[uv]
-								t2Index = currPrimitive.points[m + 1].texCoordIndex[uv]
-								t3Index = currPrimitive.points[m + 2].texCoordIndex[uv]
+								t1Index = currPrimitive.points[m].texCoordIndex[uv] + 1
+								t2Index = currPrimitive.points[m + 1].texCoordIndex[uv] + 1
+								t3Index = currPrimitive.points[m + 2].texCoordIndex[uv] + 1
 								
-								if (t1Index != 0 and t2Index != 0 and t3Index != 0) then
-								(
-									if (mod m 2) == 0 then -- even
-										tFaces[uv][faceIndex] = [t1Index , t2Index , t3Index ]
-									else 
-										tFaces[uv][faceIndex] = [t3Index , t2Index , t1Index ] -- reverse
-								)
+								if (mod m 2) == 0 then -- even
+									tFaces[uv][faceIndex] = [t1Index , t2Index , t3Index ]
+								else 
+									tFaces[uv][faceIndex] = [t3Index , t2Index , t1Index ] -- reverse
 								
 								_materialIDS[faceIndex] = _currMaterialIndex - 1
 							)
