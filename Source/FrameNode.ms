@@ -139,7 +139,10 @@ struct FrameNode
 			(
 				-- create an end point bone (same direction as parent bone with a length of boneThickness)
 			    local start = startPoint 
-				dir  = normalize (parentBone.position - start) 
+				if (parentBone != undefined) then		-- THIS FIXES IMPORT OF MODELS WITH ONE BONE
+					dir  = normalize (parentBone.position - start) 
+				else
+					dir  = [0,0,0] 
 				dir  *= (-1 * boneThickness)
 				dir += startPoint 
 				endPoint = [dir.x, dir.y, dir.z]
