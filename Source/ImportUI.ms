@@ -11,10 +11,12 @@ macroscript BMDImporterUI2 category:"MaxBMD" tooltip:"BMD Importer" Icon:#("Maxs
 		edittext txtFilePath "BMD File: " enabled:false text:"" width:250 align:#left
 		button btnBrowse "Browse..." width:100 align:#center
 		spinner spnBoneThickness "Bone Thickness:" range:[0,100,5] align:#left fieldwidth:50
+		checkBox chkTextureMirror "Allow mirrored textures " checked:true width:250 align:#left
+		checkBox chkForceBones "Force create bones " checked:false width:250 align:#left
 		checkBox chkSaveAnim "Save Animations " checked:true width:250 align:#left
 		checkBox chkExportTextures "Export textures" checked:true width:250 align:#left
-		checkBox chkIncludeScaling "Include scaling" checked:true width:250 align:#left
-		radiobuttons radExportType labels:#(".X export (games)", "character export (modeling)")
+		checkBox chkIncludeScaling "Include scaling" checked:false width:250 align:#left
+		radiobuttons radExportType labels:#("character export (modeling)", ".X export (games)")
 		button btnImport "Import" width:100 align:#center
 		label lblNotes "" width:250 height:200 align:#left -- IMPORTANT: must unhide all items before exporting .x file.
 		
@@ -46,11 +48,11 @@ macroscript BMDImporterUI2 category:"MaxBMD" tooltip:"BMD Importer" Icon:#("Maxs
 					-- UPDATE BMDVIEW.EXE PATH
 					-- bmd.SetBmdViewExePath "C:\\" -- if Max version before 2008 and the path contains spaces the path will have to be manually updated
 					local exportType = case radExportType.state of (
-														1: #XFILE
-														2: #CHARACTER
+														1: #CHARACTER
+														2: #XFILE
 													)
 
-					bmd.Import txtFilePath.text spnBoneThickness.value chkSaveAnim.checked chkExportTextures.checked exportType chkIncludeScaling.checked
+					bmd.Import txtFilePath.text spnBoneThickness.value chkTextureMirror.checked chkForceBones.checked chkSaveAnim.checked chkExportTextures.checked exportType chkIncludeScaling.checked
 					btnImport.enabled = true
 				)
 				
@@ -61,6 +63,6 @@ macroscript BMDImporterUI2 category:"MaxBMD" tooltip:"BMD Importer" Icon:#("Maxs
 		)
 	)
 	
-	createDialog MaxBMDUI_Rollout 300 200
+	createDialog MaxBMDUI_Rollout 300 240
 
 )
