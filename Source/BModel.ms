@@ -59,7 +59,7 @@ struct BModel
 	
 	_parentBoneIndexs = #(),
 	_allowTextureMirror = false, -- doesn't work on characters? required for stages?
-	
+	_forceCreateBones = false,
 	
 	_exportType=#XFILE, -- #XFILE, #CHARACTER
 	_runExtractTexturesCmd = true,
@@ -152,26 +152,61 @@ struct BModel
 			)
 		)
 		
-		modelMesh = mesh vertices: vertices faces:faces tverts:tverts materialIDS:_materialIDS
-		modelMesh.name = getFilenameFile _bmdFilePath
-		
-		update modelMesh
-		ClassOf modelMesh
-
-		-- tvert faces
-		--Set texcoord faces 
-		buildTVFaces modelMesh  false
-		for i = 1 to tFaces.count do
+		-- FIX: Fill missing material IDs
+		if (_materialIDS.count > 0) then
 		(
-			if (tFaces[i] != undefined) then -- TODO: should never have undefined texture faces
-				setTVFace modelMesh i tFaces[i]
-		)
+			for i=_materialIDS.count+1 to faces.count do
+			(
+				_materialIDS[i] = 0
+			)
+			
+			
+			modelMesh = mesh vertices: vertices faces:faces tverts:tverts materialIDS:_materialIDS
+			modelMesh.name = getFilenameFile _bmdFilePath
+			
+			update modelMesh
+			ClassOf modelMesh
 
+			-- tvert faces
+			--Set texcoord faces 
+			buildTVFaces modelMesh  false
+			for i = 1 to tFaces.count do
+			(
+				if (tFaces[i] != undefined) then -- TODO: should never have undefined texture faces
+					setTVFace modelMesh i tFaces[i]
+			)
+		)
+		else
+		(
+			_materialIDS.count = faces.count
+			for i = 1 to _materialIDS.count do
+			(
+				_materialIDS[i] = 0 -- not found index
+			)
+			
+			
+			modelMesh = mesh vertices: vertices faces:faces tverts:tverts materialIDS:_materialIDS
+			modelMesh.name = getFilenameFile _bmdFilePath
+			
+			update modelMesh
+			ClassOf modelMesh
+
+			-- tvert faces
+			--Set texcoord faces 
+			--buildTVFaces modelMesh  false	-- FIX: Do not set texture faces when there are no textures on model.
+			for i = 1 to tFaces.count do
+			(
+				if (tFaces[i] != undefined) then -- TODO: should never have undefined texture faces
+					setTVFace modelMesh i tFaces[i]
+			)
+		)
+		
+		
 		-- set normals [no effect?]
 		if (normals.count != vertices.count) then
 		(
-			messageBox "Invalid normals?"
-			throw "Invalid normals?"
+			--messageBox "Invalid normals?"	-- FIX: IGNORE INVALID NORMALS TO ALLOW IMPORT SOME MODELS
+			--throw "Invalid normals?"
 		)
 		for i = 1 to vertices.count  do
 		(
@@ -265,7 +300,7 @@ struct BModel
 		meditMaterials[1]  = cmat
 		
 		-- freeze model by default
-		freeze  modelMesh
+		--freeze  modelMesh	-- DO NOT FREEZE MODEL BY DEFAULT
 		modelMesh.showFrozenInGray = off
 		
 		return modelMesh
@@ -409,11 +444,14 @@ fn DrawBatch index def =
 	  multiMatrixTable = #()
 
 	--print (vtx.texCoords.count as string)
-	 for i = 1 to vtx.texCoords[1].count do
-	 (
-		tvert = vtx.texCoords[1][i]
-		tverts[i] = [tvert.s, -tvert.t, 0] -- flip uv v element
-	 )
+	 if (vtx.texCoords[1] != undefined) then
+	(
+		for i = 1 to vtx.texCoords[1].count do
+		(
+			tvert = vtx.texCoords[1][i]
+			tverts[i] = [tvert.s, -tvert.t+1, 0] -- flip uv v element
+		)
+	)
 
 	  for currPacket in currBatch.packets do
 	  (
@@ -633,7 +671,7 @@ fn CreateFrameNodes j d parentMatrix parentFrameNode =
 			
 			fNode.parentFrameNode = parentFrameNode
 			fNode.effP = effP
-			fNode.name = _bmdFileName + "_" + f.name
+			--fNode.name = _bmdFileName + "_" + f.name	-- FIX: DO NOT ADD FILENAME PREFIX TO BONES
 			
 			append parentFrameNode.children fNode
 		   b1 = true
@@ -788,6 +826,7 @@ fn DrawScenegraph j d parentMatrix =
 				)
 				else if (tex.texHeaders[v2].wrapS == 2) then
 				(
+					_currMaterial.name += "_U" -- add suffix to let the modeler know where mirror should be used
 					if (_allowTextureMirror) then
 					(
 						_currMaterial.diffusemap.coords.U_Mirror = true
@@ -826,19 +865,20 @@ fn DrawScenegraph j d parentMatrix =
 				)
 				else if (tex.texHeaders[v2].wrapT == 2) then
 				(
+					_currMaterial.name += "_V" -- add suffix to let the modeler know where mirror should be used
 					if (_allowTextureMirror) then
 					(
 						_currMaterial.diffusemap.coords.V_Mirror = true
 						_currMaterial.diffusemap.coords.V_Tile = false
-						_currMaterial.diffusemap.coords.V_offset = -0.5
+						_currMaterial.diffusemap.coords.V_offset = 0.5
 						_currMaterial.diffusemap.coords.V_Tiling = 0.5
 						
 						if (hasAlpha) then
 						(	
 							_currMaterial.opacityMap.coords.V_Mirror = true
 							_currMaterial.opacityMap.coords.V_Tile = false
-							_currMaterial.opacityMap.coords.V_offset = -0.5
-							_currM
+							_currMaterial.opacityMap.coords.V_offset = 0.5
+							_currMaterial.opacityMap.coords.V_Tiling = 0.5
 						)
 					)
 				)
@@ -892,9 +932,9 @@ fn DrawScene =
 	identity = m.GetIdentity()
 	CreateFrameNodes 0 0 identity rootFrameNode 
 	
+	-- FIX: Force create bone option allows to generate bones independently of their count
 	if ((rootFrameNode.children.count == 1 AND rootFrameNode.children[1].children.count == 0)) then
-		_createBones = false  
-	
+		_createBones = false  	
 	local origWorldBonePos = undefined
 	
 	if (_createBones) then
@@ -940,6 +980,11 @@ fn DrawScene =
 	(
 		chr = CreateCharacter(rootFrameNode)
 	    --RotateAroundWorld  chr (EulerAngles 90 0 0)
+		
+		-- Rotate Character assembly upwards and swap hierarchy for Point and Character
+		rotate chr (EulerAngles 90 0 0)
+		_bones[1].parent = d
+		d.parent = chr
 	)
 	
 	--RotateAroundWorld modelMesh (EulerAngles 90 0 0) -- e.g. stage, object
@@ -1219,7 +1264,7 @@ fn CreateBTPDataFile =
 	close fBTP
 ),
 	
-fn Import filename boneThickness loadAnimations exportTextures exportType includeScaling =
+fn Import filename boneThickness allowTextureMirror forceCreateBones loadAnimations exportTextures exportType includeScaling =
 (
 	if (exportTextures) then
 		_texturePrefix = ""
@@ -1234,9 +1279,9 @@ fn Import filename boneThickness loadAnimations exportTextures exportType includ
 	--_exportType=#XFILE
 	_exportType=exportType 
 	
-	_allowTextureMirror = true -- doesn't work on characters? required for stages?
-	
-	_loadAnimations =loadAnimations
+	_allowTextureMirror = allowTextureMirror
+	_forceCreateBones = forceCreateBones
+	_loadAnimations = loadAnimations
 	_boneThickness = boneThickness
 	LoadModel filename
 	
