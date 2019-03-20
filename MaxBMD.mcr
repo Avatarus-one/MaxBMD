@@ -2605,7 +2605,7 @@ struct MatEntry
   chanControls = #(), -- u16[8];
 
   color1 = #(), --u16[2];
-  chanControls = #(), -- u16[4];
+  -- chanControls = #(), -- u16[4];
   color2 = #(), --u16[2]; //not in MAT2 block
 
   lightList = #(), --lights u16[8]; //all 0xffff most of the time, not in MAT2 block
@@ -4004,11 +4004,11 @@ struct BModel
 			--messageBox "Invalid normals?"	-- FIX: IGNORE INVALID NORMALS TO ALLOW IMPORT SOME MODELS
 			--throw "Invalid normals?"
 		)
-		for i = 1 to vertices.count  do
+		/*for i = 1 to vertices.count  do	-- FIX: DO NOT IMPORT NORMALS, THEY ARE BROKEN ON NEW MAX VERSIONS
 		(
 			if (normals[i] != undefined) then
 				setNormal modelMesh i normals[i] 
-		)
+		)*/
 
 		update modelMesh 
 		
@@ -4646,14 +4646,14 @@ fn DrawScenegraph j d parentMatrix =
 					(
 						_currMaterial.diffusemap.coords.U_Mirror = true
 						_currMaterial.diffusemap.coords.U_Tile = false
-						_currMaterial.diffusemap.coords.u_offset = 0.5
+						_currMaterial.diffusemap.coords.u_offset = 0.0	-- must be 0.5 in older versions of 3ds Max
 						_currMaterial.diffusemap.coords.U_Tiling = 0.5
 						
 						if (hasAlpha) then
 						(
 							_currMaterial.opacityMap.coords.U_Mirror = true
 							_currMaterial.opacityMap.coords.U_Tile = false
-							_currMaterial.opacityMap.coords.u_offset = 0.5
+							_currMaterial.opacityMap.coords.u_offset = 0.0	-- must be 0.5 in older versions of 3ds Max
 							_currMaterial.opacityMap.coords.U_Tiling = 0.5
 						)
 					)
@@ -4676,14 +4676,14 @@ fn DrawScenegraph j d parentMatrix =
 					(
 						_currMaterial.diffusemap.coords.V_Mirror = true
 						_currMaterial.diffusemap.coords.V_Tile = false
-						_currMaterial.diffusemap.coords.V_offset = 0.5
+						_currMaterial.diffusemap.coords.V_offset = 0.0	-- must be 0.5 in older versions of 3ds Max
 						_currMaterial.diffusemap.coords.V_Tiling = 0.5
 						
 						if (hasAlpha) then
 						(	
 							_currMaterial.opacityMap.coords.V_Mirror = true
 							_currMaterial.opacityMap.coords.V_Tile = false
-							_currMaterial.opacityMap.coords.V_offset = 0.5
+							_currMaterial.opacityMap.coords.V_offset = 0.0	-- must be 0.5 in older versions of 3ds Max
 							_currMaterial.opacityMap.coords.V_Tiling = 0.5
 						)
 					)
