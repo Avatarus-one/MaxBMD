@@ -4934,16 +4934,16 @@ fn ExtractImages =
 	makeDir bmdPath 
 	makeDir _texturePath 
 
-	-- if no tga files are found then extract the 
+	-- if no tga files are found then extract them
 	tgaFiles = getFiles (_texturePath + "*.tga")
 
 	-- cannot use shellLaunch because it doesn't wait for a return value
 	-- don't use DOSCommand. Doesn't support spaces in full exe path. e.g. C:Program files\
 	-- if using version before 2008 then use DOSCommand and set BmdView.exe into a known path
 	if tgaFiles.count == 0 then
-		TryHiddenDOSCommand ("BmdView.exe \"" + _bmdFilePath+ "\" \""+_texturePath+ "\\\"") _bmdViewPathExe
+		TryHiddenDOSCommand ("BmdView.exe \"" + _bmdFilePath+ "\" \""+_texturePath+ "\\\"" + " TGA") _bmdViewPathExe
 
-	classof tgaFiles
+	/* classof tgaFiles
 	ddsFiles = getFiles (_texturePath + "*.dds")
 	
 	-- create tga file and delete dds file
@@ -4955,7 +4955,7 @@ fn ExtractImages =
 		destImg.filename = saveFileName
 		save destImg -- cannot save img directly (requires copy to remove dds format)
 		deleteFile f
-	)
+	)*/
 	
 	-- TODO: need to update BmdView.exe to process all file formats like BmdView2
 	errorMessage = "Error generating dds / tga image file(s).\nUse BmdView2 to export the missing tga file(s) then delete the *.ERROR file(s) and run the importer again\n\n"
