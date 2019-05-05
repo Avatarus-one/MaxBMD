@@ -4969,7 +4969,7 @@ fn ExtractImages =
 	-- don't use DOSCommand. Doesn't support spaces in full exe path. e.g. C:Program files\
 	-- if using version before 2008 then use DOSCommand and set BmdView.exe into a known path
 	if tgaFiles.count == 0 then
-		TryHiddenDOSCommand ("BmdView.exe \"" + _bmdFilePath+ "\" \""+_texturePath+ "\\\"" + " TGA") _bmdViewPathExe
+		TryHiddenDOSCommand ("BmdView.exe \"" + _bmdFilePath+ "\" \""+_texturePath+ "\\\"" + " DDS") _bmdViewPathExe
 
 	classof tgaFiles
 	ddsFiles = getFiles (_texturePath + "*.dds")
