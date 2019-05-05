@@ -12,7 +12,7 @@ Install the kW x-port plugin from http://kwxport.sourceforge.net/.
 
 IMPORTANT: If upgrading from an older version delete the BmdView folder and ImporterUI.ms in max's plugins directory.
 unzip MaxBMD.zip
-place BmdView.exe into 3ds max's root folder e.g. C:\Program Files\Autodesk\3ds Max 2008\BmdView.exe
+place BmdView.exe and readdxt.exe into 3ds max's root folder e.g. C:\Program Files\Autodesk\3ds Max 2008\BmdView.exe
 Click the MAXScript item in the Main Menu, select run Script... select "UnzipedPath\MaxBMD.ms"
 Go to Customize > Customize User Interface and select the Toolbars tab.
 Search for "MaxBMD" in the category dropdown.

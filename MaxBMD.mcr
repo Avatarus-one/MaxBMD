@@ -4646,14 +4646,14 @@ fn DrawScenegraph j d parentMatrix =
 					(
 						_currMaterial.diffusemap.coords.U_Mirror = true
 						_currMaterial.diffusemap.coords.U_Tile = false
-						_currMaterial.diffusemap.coords.u_offset = 0.0	-- must be 0.5 in older versions of 3ds Max
+						_currMaterial.diffusemap.coords.u_offset = 0.5
 						_currMaterial.diffusemap.coords.U_Tiling = 0.5
 						
 						if (hasAlpha) then
 						(
 							_currMaterial.opacityMap.coords.U_Mirror = true
 							_currMaterial.opacityMap.coords.U_Tile = false
-							_currMaterial.opacityMap.coords.u_offset = 0.0	-- must be 0.5 in older versions of 3ds Max
+							_currMaterial.opacityMap.coords.u_offset = 0.5
 							_currMaterial.opacityMap.coords.U_Tiling = 0.5
 						)
 					)
@@ -4676,14 +4676,14 @@ fn DrawScenegraph j d parentMatrix =
 					(
 						_currMaterial.diffusemap.coords.V_Mirror = true
 						_currMaterial.diffusemap.coords.V_Tile = false
-						_currMaterial.diffusemap.coords.V_offset = 0.0	-- must be 0.5 in older versions of 3ds Max
+						_currMaterial.diffusemap.coords.V_offset = 0.5
 						_currMaterial.diffusemap.coords.V_Tiling = 0.5
 						
 						if (hasAlpha) then
 						(	
 							_currMaterial.opacityMap.coords.V_Mirror = true
 							_currMaterial.opacityMap.coords.V_Tile = false
-							_currMaterial.opacityMap.coords.V_offset = 0.0	-- must be 0.5 in older versions of 3ds Max
+							_currMaterial.opacityMap.coords.V_offset = 0.5
 							_currMaterial.opacityMap.coords.V_Tiling = 0.5
 						)
 					)
@@ -4933,6 +4933,10 @@ fn DrawScene =
 			--messageBox (_bmdDir + _bmdFileName + ".x" )
 		)
 	)
+	else
+	(
+		saveMaxFile saveMaxName
+	)
 	
 	if (_exportType==#XFILE) then
 	(	
@@ -4967,19 +4971,28 @@ fn ExtractImages =
 	if tgaFiles.count == 0 then
 		TryHiddenDOSCommand ("BmdView.exe \"" + _bmdFilePath+ "\" \""+_texturePath+ "\\\"" + " TGA") _bmdViewPathExe
 
-	/* classof tgaFiles
+	classof tgaFiles
 	ddsFiles = getFiles (_texturePath + "*.dds")
 	
 	-- create tga file and delete dds file
 	for f in getFiles (_texturePath + "*.dds")  do 
 	(
-		local img = openBitMap f
+		TryHiddenDOSCommand ("readdxt.exe \""+_texturePath+ "\\" + (getFilenameFile f) + ".dds" + "\"") _bmdViewPathExe
+		
+		-- remove 00 suffix
+		oldname = _texturePath+ "\\" + (getFilenameFile f) + "00.tga"
+		newname = _texturePath+ "\\" + (getFilenameFile f) + ".tga"
+		renameFile oldname newname
+		
+		deleteFile f
+		
+		/*local img = openBitMap f
 		saveFileName = _texturePath + (getFilenameFile  f) + ".tga"
 		local destImg = copy img
 		destImg.filename = saveFileName
 		save destImg -- cannot save img directly (requires copy to remove dds format)
-		deleteFile f
-	)*/
+		deleteFile f*/
+	)
 	
 	-- TODO: need to update BmdView.exe to process all file formats like BmdView2
 	errorMessage = "Error generating dds / tga image file(s).\nUse BmdView2 to export the missing tga file(s) then delete the *.ERROR file(s) and run the importer again\n\n"
