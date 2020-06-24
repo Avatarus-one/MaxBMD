@@ -4759,7 +4759,7 @@ fn DrawScene =
 	local chr = undefined
 	local characterPos = undefined
 	
-	if (_createBones AND _exportType!=#XFILE) then
+	if (_createBones AND _exportType==#CHARACTER) then
 	(
 		chr = CreateCharacter(rootFrameNode)
 	    --RotateAroundWorld  chr (EulerAngles 90 0 0)
@@ -4822,7 +4822,12 @@ fn DrawScene =
 		if (_exportType!=#XFILE) then
 			saveMaxFile saveMaxName 
 		
-		local startFrame = 1
+		if (_exportType==#FBX) then
+		(
+			FBXExporterSetParam "Animation" true
+		)
+		
+		local startFrame = 0
 		
 		local refBoneRequiresDummyList = #() -- remove dummy objects if not required
 		for i = 1 to _bones.count do
@@ -4836,7 +4841,7 @@ fn DrawScene =
 			for f in bckFiles do
 			(
 				local bckFileName = getFilenameFile f
-				local savePath = _bmdDir + "Animations\\" + bckFileName + ".anm"
+				
 				
 				local saveMaxAnimName = _bmdDir  + bckFileName + ".max" -- .chr?
 				
@@ -4864,8 +4869,10 @@ fn DrawScene =
 						startFrame = endFrame + 1 
 						animationCount += 1
 					)
-					else
+					else if (_exportType==#CHARACTER) then
 					(
+						local savePath = _bmdDir + "Animations\\" + bckFileName + ".anm"
+						
 						saveNodes _bones savePath
 						--b.DeleteAllKeys _bones
 						--rootFrameNode.ResetControllers() -- removes animations?
@@ -4874,6 +4881,18 @@ fn DrawScene =
 						_bones = rootFrameNode.RemapBones()
 						
 					--	rootFrameNode.ResetControllers() -- removes animations?
+					)
+					else	-- FBX export
+					(
+						animationRange = interval 0 numberOfFrames
+						
+						select $Point001...*
+						
+						local savePath = _bmdDir + "Animations\\" + bckFileName + ".fbx"
+						exportFile savePath #noPrompt selectedOnly:true using:FBXEXP
+						
+						loadMaxFile saveMaxName
+						_bones = rootFrameNode.RemapBones()
 					)
 				)
 			) 
@@ -5110,7 +5129,7 @@ fn Import filename boneThickness allowTextureMirror forceCreateBones loadAnimati
 		checkBox chkSaveAnim "Save Animations " checked:true width:250 align:#left
 		checkBox chkExportTextures "Export textures" checked:true width:250 align:#left
 		checkBox chkIncludeScaling "Include scaling" checked:false width:250 align:#left
-		radiobuttons radExportType labels:#("character export (modeling)", ".X export (games)")
+		radiobuttons radExportType labels:#("character export (modeling)", "fbx export", ".X export (games)")
 		button btnImport "Import" width:100 align:#center
 		label lblNotes "" width:250 height:200 align:#left -- IMPORTANT: must unhide all items before exporting .x file.
 		
@@ -5143,7 +5162,8 @@ fn Import filename boneThickness allowTextureMirror forceCreateBones loadAnimati
 					-- bmd.SetBmdViewExePath "C:\\" -- if Max version before 2008 and the path contains spaces the path will have to be manually updated
 					local exportType = case radExportType.state of (
 														1: #CHARACTER
-														2: #XFILE
+														2: #FBX
+														3: #XFILE
 													)
 
 					bmd.Import txtFilePath.text spnBoneThickness.value chkTextureMirror.checked chkForceBones.checked chkSaveAnim.checked chkExportTextures.checked exportType chkIncludeScaling.checked
@@ -5157,6 +5177,6 @@ fn Import filename boneThickness allowTextureMirror forceCreateBones loadAnimati
 		)
 	)
 	
-	createDialog MaxBMDUI_Rollout 300 240
+	createDialog MaxBMDUI_Rollout 300 260
 
 )
