@@ -2280,7 +2280,7 @@ fn ValidateScale curBone scaleValue =
 fn AnimateBoneFrames timeOffset bones frameScale rootBoneOffset exportType refBoneRequiresDummyList includeScaling =
 (
 	
-	if (exportType == #CHARACTER AND animationLength > 0) then
+	if (exportType != #XFILE AND animationLength > 0) then
 		timeOffset = 0
 
 	--alert (bones.count as string)
@@ -2415,7 +2415,7 @@ fn AnimateBoneFrames timeOffset bones frameScale rootBoneOffset exportType refBo
 		) -- if (animationLength > 0) then*/
 	
 		
-		if (exportType == #CHARACTER AND animationLength > 0) then
+		if (exportType != #XFILE AND animationLength > 0) then
 		(
 			if (animationLength > 0) then
 				animationRange = interval 0 (animationLength * frameScale)
@@ -4825,6 +4825,9 @@ fn DrawScene =
 		if (_exportType==#FBX) then
 		(
 			FBXExporterSetParam "Animation" true
+			FBXExporterSetParam "BakeAnimation" false
+			FBXExporterSetParam "BakeResampleAnimation" false
+			FBXImporterSetParam "ConvertUnit" "in"
 		)
 		
 		local startFrame = 0
@@ -4892,6 +4895,18 @@ fn DrawScene =
 						exportFile savePath #noPrompt selectedOnly:true using:FBXEXP
 						
 						loadMaxFile saveMaxName
+						
+						--_bones = rootFrameNode.RemapBones()
+						
+						-- temporary fix for animations
+						importFile savePath #noPrompt using:FBXIMP
+						
+						animationRange = interval 0 numberOfFrames
+						
+						exportFile savePath #noPrompt selectedOnly:false using:FBXEXP
+						
+						loadMaxFile saveMaxName
+						
 						_bones = rootFrameNode.RemapBones()
 					)
 				)
